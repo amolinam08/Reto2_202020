@@ -93,8 +93,9 @@ def print_menu():
     print('3- Consultar información primera y última película.')
     print('4- Consultar películas de una productora')
     print('5- Consultar películas de un director')
-    print('6- Consultar películas por país')
-    print('7- Entender un género cinematográfico.')
+    print('6- Consultar películas de un actor')
+    print('7- Consultar películas por país')
+    print('8- Entender un género cinematográfico.')
     print('0- Salir.')
 
 
@@ -125,10 +126,14 @@ while True:
         directorinfo = controller.getDirectorMovies(cont, director)
         print_director_data(directorinfo)
     elif int(input_) == 6:
+        actor = input('Ingrese el nombre del actor: ').strip().lower()
+        actorinfo = controller.get_movie_actor(cont, actor)
+        print_actor_data(actorinfo)
+    elif int(input_) == 7:
         country = input('Ingrese el nombre del país: ').strip().lower()
         countryinfo = controller.get_movies_by_country(cont, country)
         print_country_data(countryinfo)
-    elif int(input_) == 7:
+    elif int(input_) == 8:
         t1_start = process_time()
         genres = controller.search_genres(cont)
         for genre in genres:
