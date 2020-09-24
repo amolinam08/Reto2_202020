@@ -13,7 +13,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the producer_name
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -59,7 +59,8 @@ def load_data(catalog, casting_file, details_file):
     """
     t1_start = process_time()  # tiempo inicial
     load_details(catalog, details_file)
-    load_casting(catalog, casting_file)
+    load_actor_id(catalog, casting_file)
+    load_actor(catalog, casting_file)
     t1_stop = process_time()  # tiempo final
     print('Tiempo de ejecución ', t1_stop - t1_start, ' segundos')
 
@@ -83,29 +84,53 @@ def load_details(catalog, details_file):
             producer_names = movie['production_companies'].split(",")
             for producer in producer_names:
                 model.add_movie_production_companies(catalog, producer, movie)
+                
+def load_actor(catalog, actorfile):
+    dialect, dialect.delimiter = csv.excel(),';'
+    input_file = csv.DictReader(open(actorfile, encoding='utf-8-sig'), dialect= dialect) 
+    for Act in input_file:
+        strip_Act = {}
+        for key, value in Act.items():
+            strip_Act[key.strip()] = value.strip()
+        Act = strip_Act
+        model.add_actor(catalog, Act)
+        actors_names1 = Act['actor1_name'].split(',') 
+        for actors in actors_names1:
+            if actors != 'none':
+                model.add_movie_actors(catalog, actors.lower(), Act)
+        actors_names2 = Act['actor2_name'].split(',') 
+        for actors in actors_names2:
+            if actors != 'none':
+                model.add_movie_actors(catalog, actors.lower(), Act)
+        actors_names3 = Act['actor3_name'].split(',') 
+        for actors in actors_names3:
+            if actors != 'none':
+                model.add_movie_actors(catalog, actors.lower(), Act)
+        actors_names4 = Act['actor4_name'].split(',') 
+        for actors in actors_names4:
+            if actors != 'none':
+                model.add_movie_actors(catalog, actors.lower(), Act)
+        actors_names5 = Act['actor5_name'].split(',') 
+        for actors in actors_names5:
+            if actors != 'none':
+                model.add_movie_actors(catalog, actors.lower(), Act)
+        
+
+def load_actor_id(catalog, actorfile):
+    dialect, dialect.delimiter = csv.excel(),';'
+    input_file = csv.DictReader(open(actorfile, encoding='utf-8-sig'), dialect= dialect) 
+    for Actor in input_file:
+        strip_Actor = {}
+        for key, value in Actor.items():
+            strip_Actor[key.strip()] = value.strip()
+        Actor = strip_Actor
+        model.add_actor(catalog, Actor)
 
 
-def load_casting(catalog, casting_file):
-    """
-    Carga en el catalogo el elenco a partir de la información
-    del archivo de casting.
-    """
-    dialect, dialect.delimiter = csv.excel(), ';'
-    with open(casting_file, encoding='utf-8-sig') as input_file:
-        file_reader = csv.DictReader(input_file, dialect=dialect)
-        for movie in file_reader:
-            strip_movie = {}
-            for key, value in movie.items():
-                strip_movie[key.strip()] = value.strip()
-            movie = strip_movie
-            model.add_casting(catalog, movie)
-
-
-# ___________________________________________________
 #  Funciones para consultas
 # ___________________________________________________
 def details_size(catalog):
-    # Numero de detallesleídos.
+    # Numero de detalles leídos.
     return model.details_size(catalog)
 
 
@@ -141,5 +166,28 @@ def get_movies_by_producer(catalog, producer_name):
 def show_producer_data(producer):
     t1_start = process_time()  # tiempo inicial
     model.show_producer_data(producer)
+    t1_stop = process_time()  # tiempo final
+    print('Tiempo de ejecución ', t1_stop - t1_start, ' segundos')
+
+
+def actors(catalog, actor):
+    t1_start = process_time()  # tiempo inicial
+    print('Las películas del actor son: ')
+    average, size = get_movies_by_actor(catalog, actor)
+    print('Tienen un promedio de ', average, ' y ha participado en ', size, ' películas')
+    t1_stop = process_time()  # tiempo final
+    print('Tiempo de ejecución ', t1_stop - t1_start, ' segundos')
+
+
+def get_movies_by_actor (catalog, actorName):
+    """
+    Retorna las peliculas de un director
+    """
+    actorInfo = model.get_movie_actor(catalog, actorName)
+    return actorInfo
+
+def show_actor_data(actor):
+    t1_start = process_time()  # tiempo inicial
+    model.show_actor_data(actor)
     t1_stop = process_time()  # tiempo final
     print('Tiempo de ejecución ', t1_stop - t1_start, ' segundos')

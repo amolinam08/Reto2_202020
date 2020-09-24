@@ -38,16 +38,16 @@ operación seleccionada.
 # ___________________________________________________
 #  Ruta a los archivos
 # ___________________________________________________
-casting_file = config.data_dir + 'MoviesCastingRaw-small.csv'
-details_file = config.data_dir + 'MoviesDetailsCleaned-small.csv'
+#casting_file =  "Data/AllMoviesCastingRaw.csv"
+#details_file =  "Data/AllMoviesDetailsCleaned.csv"
 
 
-# casting_file = "Data/Peliculas/MoviesCastingRaw-small.csv"
-# details_file = "Data/Peliculas/SmallMoviesDetailsCleaned.csv"
+casting_file = "Data/MoviesCastingRaw-small.csv"
+details_file = "Data/SmallMoviesDetailsCleaned.csv"
 
 
 # ___________________________________________________
-#  Funciones para imprimir la inforamación de
+#  Funciones para imprimir la información de
 #  respuesta.  La vista solo interactua con
 #  el controlador.
 # ___________________________________________________
@@ -58,7 +58,11 @@ def print_producer_data(producer):
     """
     controller.show_producer_data(producer)
 
-
+def print_actor_data(actor):
+    """
+    Imprime las películas de un actor
+    """
+    controller.show_actor_data(actor)
 # ___________________________________________________
 #  Menu principal
 # ___________________________________________________
@@ -68,6 +72,7 @@ def print_menu():
     print('2- Cargar datos de películas de los archivos csv.')
     print('3- Consultar información primera y última película.')
     print('4- Consultar películas de una productora')
+    print('5- Consultar peliculas de un actor')
     print('0- Salir.')
 
 
@@ -93,6 +98,10 @@ while True:
         production_company = input('Ingrese el nombre de la productora para saber sus películas: ').strip()
         producerinfo = controller.get_movies_by_producer(cont, production_company)
         print_producer_data(producerinfo)
+    elif int(input_) == 5:
+        name_actor = input("Ingrese el nombre del actor para conocer sus peliculas: ").strip().lower()
+        actorInfo = controller.get_movies_by_actor(cont, name_actor)
+        print_actor_data(actorInfo)
     elif int(input_) == 0:
         sys.exit(0)
     else:
