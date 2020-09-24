@@ -49,13 +49,14 @@ def new_catalog():
     catalog = {
         'details': lt.newList('SINGLE_LINKED'),
         'casting': lt.newList('SINGLE_LINKED'),
-        #'producer_companies': mp.newMap(1000, maptype='PROBING', loadfactor=2, comparefunction=compare_ids)
-        #'producer_companies': mp.newMap(200, maptype='PROBING', loadfactor=10, comparefunction=compare_ids)
-        #'producer_companies': mp.newMap(4000, maptype='PROBING', loadfactor=0.5, comparefunction=compare_ids), 
-        'movies_ids': mp.newMap(5000, maptype='PROBING', loadfactor=0.4, comparefunction=compare_ids),
-        'production_companies': mp.newMap(1000, maptype='PROBING', loadfactor=0.4, comparefunction=compare_producers),
         'actors_id' : mp.newMap(4000, maptype='PROBING', loadfactor=0.5, comparefunction=compare_actors),
-        'actors': mp.newMap(4000, maptype='PROBING', loadfactor=0.5, comparefunction=compare_actors)
+        'actors': mp.newMap(4000, maptype='PROBING', loadfactor=0.5, comparefunction=compare_actors),
+        'movies_ids': mp.newMap(50000, maptype='PROBING', loadfactor=0.04, comparefunction=compare_ids),
+        'production_companies': mp.newMap(1000, maptype='PROBING', loadfactor=0.4, comparefunction=compare_producers),
+        'directors': mp.newMap(50000, maptype='PROBING', loadfactor=0.04, comparefunction=compareDirectors),
+        'directors_id': mp.newMap(1000, maptype='PROBING', loadfactor=0.4, comparefunction=compareDirectors),
+        'production_countries': mp.newMap(1000, maptype='PROBING', loadfactor=0.4, comparefunction=compare_countries),
+        'genres': mp.newMap(1000, maptype='PROBING', loadfactor=0.4, comparefunction=compare_genres),
     }
     return catalog
 
@@ -80,7 +81,50 @@ def new_actor(name):
                 'average_rating': 0.0}
     return actor
 
+def new_director(name):
+    """Crea una nueva estructura para modelar las películas de un director y su promedio de rating
+
+    Args:
+        name (name): Nombre del director 
+    Returns:
+        dict: Diccionario del director con su nombre, sus películas y el promedio de las mismas. 
+    """
+    director = {'name': name,
+                'director_id': lt.newList('SINGLE_LINKED', compare_ids),
+                'total_movies': 0,
+                'movies': lt.newList('SINGLE_LINKED', compareDirectors),
+                'average_rating': 0.0}
+    return director
+
+
+def new_producer_country(name):
+    """Crea una nueva estructura para modelar las películas de un país productor de películas y su promedio de rating
+
+    Args:
+        name (name): Nombre del país de producción
+    Returns:
+        dict: Diccionario del país con su nombre, sus películas y el año. 
+    """
+    country = {'name': name,
+               'movies': lt.newList('SINGLE_LINKED', compare_countries),
+               'year': 0,
+               'average_rating': 0.0,
+               'director': lt.newList('SINGLE_LINKED', compareDirectors)}
+    return country
+
+
+def new_genre(name):
+    """
+    Crea una nueva estructura para modelar las películas de una compañia de producción
+    y su promedio de ratings
+    """
+    genre = {'name': name, 'movies': lt.newList('SINGLE_LINKED', compare_producers), 'average_rating': 0}
+    return genre
+
+
 # Funciones para agregar información al catálogo.
+
+
 def add_details(catalog, movie):
     """
     Esta función adiciona detalles a la lista de películas,
@@ -91,14 +135,21 @@ def add_details(catalog, movie):
 
     
 def add_movie(catalog, movie):
-    """
-    Esta funcion adiciona una película a la lista de películas,
-    adicionalmente lo guarda en un Map usando como llave su id.
-    Finalmente crea una entrada en el Map de productoras, para indicar que este
-    la película hace parte de la productora-
-    """
     lt.addLast(catalog['details'],catalog['casting'], movie)
     mp.put(catalog['movies_ids'], movie['production_companies'], movie['actors'], movie)
+
+
+def addDirector(catalog, director):
+    """
+    Adiciona un director al catalogo
+    """
+    lt.addLast(catalog['casting'], director)
+    mp.put(catalog['directors'], director['director_name'], director)
+
+
+def addDirector_id(catalog, director):
+    mp.put(catalog['directors_id'], director['id'], director)
+
 
 def add_actor(catalog, actor):
     lt.addLast(catalog['casting'], actor)
@@ -109,6 +160,7 @@ def add_actor(catalog, actor):
     mp.put(catalog['actors'], actor['actor5_name'], actor)
     mp.put(catalog['actors_id'], actor['id'], actor)
 
+    
 def add_movie_production_companies(catalog, producer_name, movie):
     producers = catalog['production_companies']
     existproducer = mp.contains(producers, producer_name)  
@@ -156,6 +208,94 @@ def add_movie_actors(catalog, actor, actors_id):
         Aactor['average_rating'] = (actor_avg + float(movie_avg)) / 2
 
 
+def addDirectorMovie(catalog, director, directors_id):
+    """
+    Agrega una relación entre una película y un director. 
+    """
+    directors = catalog['directors']
+    movies = catalog['movies_ids']
+    existdirector = mp.contains(directors, director)
+    movie_id = directors_id['id']
+
+    if existdirector:
+        entry = mp.get(directors, director)
+        entry_m = mp.get(movies, movie_id)
+        directorr = me.getValue(entry)
+        movie = me.getValue(entry_m)
+    else:
+        directorr = new_director(director)
+        movie = new_director(director)
+        entry_m = mp.get(movies, movie_id)
+        movie = me.getValue(entry_m)
+        mp.put(directors, director, directorr)
+    lt.addLast(directorr['director_id'], directors_id['id'])
+    lt.addLast(directorr['movies'], movie)
+    directorr['total_movies'] += 1
+
+    # Director vote average
+
+    director_avg = directorr['average_rating']
+    movie_av = mp.get(movies, movie_id)
+    movie_avg = movie_av['value']['vote_average']
+
+    if director_avg == 0.0:
+        directorr['average_rating'] = float(movie_avg)
+    else:
+        directorr['average_rating'] = (director_avg + float(movie_avg)) / 2
+
+
+def add_movie_production_countries(catalog, country, movie):
+    producer_countries = catalog['production_countries']
+    directors = catalog['directors_id']
+    existproducer = mp.contains(producer_countries, country)
+    movie_id = movie['id']
+
+    if existproducer:
+        entry = mp.get(producer_countries, country)
+        entry_d = mp.get(directors, movie_id)
+        producer = me.getValue(entry)
+        director = me.getValue(entry_d)
+    else:
+        producer = new_producer_country(country)
+        director = new_producer_country(country)
+        entry_d = mp.get(directors, movie_id)
+        director = me.getValue(entry_d)
+        mp.put(producer_countries, country, producer)
+
+    lt.addLast(producer['movies'], movie)
+    lt.addLast(producer['director'], director)
+
+    # country vote average 
+
+    producer_avg = producer['average_rating']
+    movie_avg = movie['vote_average']
+    if producer_avg == 0.0:
+        producer['average_rating'] = float(movie_avg)
+    else:
+        producer['average_rating'] = (producer_avg + float(movie_avg)) / 2
+
+
+def add_movie_genre(catalog, genre_name, movie):
+    genres = catalog['genres']
+    existgenre = mp.contains(genres, genre_name)
+
+    if existgenre:
+        entry = mp.get(genres, genre_name)
+        genre = me.getValue(entry)
+    else:
+        genre = new_genre(genre_name)
+        mp.put(genres, genre_name, genre)
+    lt.addLast(genre['movies'], movie)
+
+    # Genre vote average.
+    genre_avg = genre['average_rating']
+    movie_avg = movie['vote_average']
+    if genre_avg == 0.0:
+        genre['average_rating'] = float(movie_avg)
+    else:
+        genre['average_rating'] = (genre_avg + float(movie_avg)) / 2
+
+
 # ==============================
 # Funciones de consulta
 # ==============================
@@ -182,6 +322,7 @@ def show_producer_data(producer):
     Imprime las películas de una productara.
     """
     if producer:
+        print(producer)
         print('Productora de cine encontrada: ' + producer['name'])
         print('Promedio: ' + str(producer['average_rating']))
         print('Total de películas: ' + str(lt.size(producer['movies'])))
@@ -209,14 +350,56 @@ def show_actor_data(actor):
         print('No se encontró el actor')
 
 
-def total_average(lista):
-    total = lt.size(lista)
-    votes = 0
-    for i in range(lt.size(lista)):
-        movie = lt.getElement(lista, i)
-        votes += float(movie)
-    total_vote_average = votes / total
-    return round(total_vote_average, 1)
+def show_director_data(director):
+    """
+    Imprime las películas de un director.
+    """
+    if director:
+        print('Director de cine encontrado: ' + director['name'])
+        print('Promedio: ' + str(director['average_rating']))
+        print('Total de películas: ' + str(lt.size(director['movies'])))
+        iterator = it.newIterator(director['movies'])
+        while it.hasNext(iterator):
+            movie = it.next(iterator)
+            print('Título: ' + movie['title'] + ' | Vote Average: ' + movie['vote_average'])
+    else:
+        print('No se encontró el director')
+
+
+def show_country_data(country):
+    """
+    Imprime las películas de una productara.
+    """
+    if country:
+        print('País de producción de cine encontrada: ' + country['name'])
+        print('Promedio: ' + str(country['average_rating']))
+        print('Total de películas: ' + str(lt.size(country['movies'])))
+        iterator = it.newIterator(country['movies'])
+        iterator_2 = it.newIterator(country['director'])
+        while it.hasNext(iterator):
+            movie = it.next(iterator)
+            while it.hasNext(iterator_2):
+                director = it.next(iterator_2)
+                print('Título: ' + movie['title'] + ' | Relase Date: ' + movie['release_date'] + '| Director: ' +
+                      director['director_name'])
+    else:
+        print('No se encontró el país')
+
+
+def show_genre_data(genre):
+    """
+    - Imprime la lista de todas las películas asociadas a un género.
+    - El total de películas.
+    - El promedio de votos del género.
+    """
+    iterator = it.newIterator(genre['movies'])
+    while it.hasNext(iterator):
+        movie = it.next(iterator)
+        print('Título: ' + movie['title'] + ' | Vote Average: ' + movie['vote_average'])
+    print('\nGénero(s) de películas a buscar: ' + genre['name'])
+    print('Promedio: ' + str(genre['average_rating']))
+    print('Total de películas: ' + str(lt.size(genre['movies'])))
+    print('---------------------')
 
 
 def get_movie_producer(catalog, producer_name):
@@ -237,24 +420,45 @@ def get_movie_actor(catalog, actor_name):
         return me.getValue(actor)
     return None
 
+def get_director_movies(catalog, director_name):
+    """
+    Retorna la lista de películas asociadas a un director
+    """
+    director = mp.get(catalog['directors'], director_name)
+    if director:
+        return me.getValue(director)
+    return None
 
-"""
-def productors_movies(catalog,production):
-    lista = lt.newList('ARRAYLIST')
-    values_average = lt.newList('ARRAYLIST')
-    for i in range(lt.size(catalog['details'])):
-        file = lt.getElement(catalog['details'],i)
-        if production.strip().lower() == file['production_companies'].strip().lower():
-            movies = file['title']
-            average = file['vote_average']
-            lt.addLast(values_average,average)
-            lt.addLast(lista,movies)
 
-    for i in range(lt.size(lista)):
-        print('-',lt.getElement(lista,i))
-           
-    average_number = total_average(values_average)
-    return average_number, lt.size(lista)
+def get_movie_country(catalog, countries):
+    """
+    Retorna las películas a partir del nombre de la productora
+    """
+    country = mp.get(catalog['production_countries'], countries)
+    if country:
+        return me.getValue(country)
+    return None
+
+
+def get_genre_movies(catalog, genre):
+    """
+    Retorna las películas a partir del nombre del género.
+    """
+    genre_movies = mp.get(catalog['genres'], genre)
+    if genre_movies:
+        return me.getValue(genre_movies)
+    return None
+
+
+def search_genres(catalog, genres):
+    for index in range(len(genres)):
+        genres[index] = genres[index].capitalize()
+        existgenre = mp.contains(catalog['genres'], genres[index])
+        if not existgenre:
+            print('Un género no se encuentra. Intente de nuevo.')
+            return None
+    return genres
+
 
 def directors_movies(catalog,production):
     lista = lt.newList('ARRAYLIST')
@@ -272,7 +476,7 @@ def directors_movies(catalog,production):
            
     average_number = total_average(values_average)
     return average_number, lt.size(lista)
-"""
+
 # ==============================
 # Funciones de Comparacion
 # ==============================
@@ -295,6 +499,7 @@ def compare_producers(keyname, producer):
     else:
         return -1
 
+
 def compare_actors(keyname, producer):
     entry = me.getKey(producer)
     if keyname == entry:
@@ -304,3 +509,34 @@ def compare_actors(keyname, producer):
     else:
         -1
     
+
+
+def compareDirectors(keyname, producer):
+    dientry = me.getKey(producer)
+    if keyname == dientry:
+        return 0
+    elif keyname > dientry:
+        return 1
+    else:
+        return -1
+
+
+def compare_countries(keyname, country):
+    coentry = me.getKey(country)
+    if keyname == coentry:
+        return 0
+    elif keyname > coentry:
+        return 1
+    else:
+        return -1
+
+
+def compare_genres(keyname, producer):
+    proentry = me.getKey(producer)
+    if keyname == proentry:
+        return 0
+    elif keyname > proentry:
+        return 1
+    else:
+        return -1
+

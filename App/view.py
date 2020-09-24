@@ -25,6 +25,7 @@ import config
 from DISClib.ADT import list as lt
 from DISClib.DataStructures import listiterator as it
 from App import controller
+from time import process_time
 
 assert config
 
@@ -58,11 +59,35 @@ def print_producer_data(producer):
     """
     controller.show_producer_data(producer)
 
+
 def print_actor_data(actor):
     """
     Imprime las películas de un actor
     """
     controller.show_actor_data(actor)
+
+def print_director_data(director):
+    """
+    Imprime las películas de un director
+    """
+    controller.show_director_data(director)
+
+
+def print_country_data(country):
+    """
+    Imprime las películas de un país
+    """
+    controller.show_country_data(country)
+
+
+def print_genre_data(genre_info):
+    """
+    - Imprime la lista de todas las películas asociadas a un género.
+    - El total de películas.
+    - El promedio de votos del género.
+    """
+    controller.show_genre_data(genre_info)
+
 # ___________________________________________________
 #  Menu principal
 # ___________________________________________________
@@ -72,7 +97,10 @@ def print_menu():
     print('2- Cargar datos de películas de los archivos csv.')
     print('3- Consultar información primera y última película.')
     print('4- Consultar películas de una productora')
-    print('5- Consultar peliculas de un actor')
+    print('5- Consultar películas de un director')
+    print('6- Consultar películas por país')
+    print('7- Entender un género cinematográfico.')
+    print('8- Consultar peliculas de un actor')
     print('0- Salir.')
 
 
@@ -95,10 +123,25 @@ while True:
         print('La última película de la lista es:')
         controller.show_movie(cont, controller.casting_size(cont))
     elif int(input_) == 4:
-        production_company = input('Ingrese el nombre de la productora para saber sus películas: ').strip()
+        production_company = input('Ingrese el nombre de la productora para saber sus películas: ').lower().strip()
         producerinfo = controller.get_movies_by_producer(cont, production_company)
         print_producer_data(producerinfo)
     elif int(input_) == 5:
+        director = input('Ingrese el nombre del director: ').strip().lower()
+        directorinfo = controller.getDirectorMovies(cont, director)
+        print_director_data(directorinfo)
+    elif int(input_) == 6:
+        country = input('Ingrese el nombre del país: ').strip().lower()
+        countryinfo = controller.get_movies_by_country(cont, country)
+        print_country_data(countryinfo)
+    elif int(input_) == 7:
+        t1_start = process_time()
+        genres = controller.search_genres(cont)
+        for genre in genres:
+            genre_data = controller.get_movies_by_genre(cont, genre)
+            print_genre_data(genre_data)
+        print('Tiempo de ejecución ', process_time() - t1_start, ' segundos')
+    elif int(input_) == 8:
         name_actor = input("Ingrese el nombre del actor para conocer sus peliculas: ").strip().lower()
         actorInfo = controller.get_movies_by_actor(cont, name_actor)
         print_actor_data(actorInfo)
